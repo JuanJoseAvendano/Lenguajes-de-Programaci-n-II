@@ -1,0 +1,92 @@
+#include <iostream>
+#include <windows.h>
+#include <sql.h>
+#include <sqlext.h>
+#include <string>
+
+using namespace std;
+
+int main() {
+    system("chcp 1252");
+
+    SQLHENV hEnv;
+    SQLHDBC hDbc;
+    SQLHSTMT hStmt;
+    SQLRETURN ret;
+
+    // Inicializar entorno
+    SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &hEnv);
+    SQLSetEnvAttr(hEnv, SQL_ATTR_ODBC_VERSION, (void*)SQL_OV_ODBC3, 0);
+    SQLAllocHandle(SQL_HANDLE_DBC, hEnv, &hDbc);
+
+    // Conexión a la base de datos
+    SQLCHAR connStr[] = "DRIVER={SQL Server};SERVER=LAPTOP-8VD1BAB0\\SQLEXPRESS;DATABASE=datos_generales;Trusted_Connection=yes;";
+    SQLDriverConnectA(hDbc, NULL, connStr, SQL_NTS, NULL, 0, NULL, SQL_DRIVER_COMPLETE);
+
+    // Crear statement
+    SQLAllocHandle(SQL_HANDLE_STMT, hDbc, &hStmt);
+
+    // Consulta SQL
+    SQLCHAR query[] =
+        "SELECT "
+        "Num_Empleado, "
+        "(Nombre + ' ' + Apellido_Paterno + ' ' + Apellido_Materno) AS Nombre_Completo, "
+        "Fecha_Nacimiento, "
+        "RFC, "
+        "Centro_Trabajo, "
+        "Descripcion_Puesto, "
+        "CASE WHEN Directivo = 1 THEN 'SI' ELSE 'NO' END AS Es_Directivo "
+        "FROM Datos_Empleados;";
+
+    ret = SQLExecDirectA(hStmt, query, SQL_NTS);
+
+    if (SQL_SUCCEEDED(ret)) {
+        SQLINTEGER numEmpleado;
+        SQLCHAR nombreCompleto[150], fechaNacimiento[11], rfc[20], centro[100], puesto[100], directivo[5];
+
+        // Mostrar encabezado de la tabla
+        cout << "+-----------------------------------------------------------------------------------------------+" << endl;
+        cout << "| ID | Nombre Completo              | Nacimiento | RFC              | Centro     | Directivo    |" << endl;
+        cout << "+-----------------------------------------------------------------------------------------------+" << endl;
+
+        // Enlazar columnas
+        SQLBindCol(hStmt, 1, SQL_C_LONG, &numEmpleado, 0, NULL);
+        SQLBindCol(hStmt, 2, SQL_C_CHAR, nombreCompleto, sizeof(nombreCompleto), NULL);
+        SQLBindCol(hStmt, 3, SQL_C_CHAR, fechaNacimiento, sizeof(fechaNacimiento), NULL);
+        SQLBindCol(hStmt, 4, SQL_C_CHAR, rfc, sizeof(rfc), NULL);
+        SQLBindCol(hStmt, 5, SQL_C_CHAR, centro, sizeof(centro), NULL);
+        SQLBindCol(hStmt, 6, SQL_C_CHAR, puesto, sizeof(puesto), NULL);
+        SQLBindCol(hStmt, 7, SQL_C_CHAR, directivo, sizeof(directivo), NULL);
+
+        // Leer filas
+        while (SQLFetch(hStmt) == SQL_SUCCESS) {
+            cout << "| " << numEmpleado << "  | "
+                 << nombreCompleto << " | "
+                 << fechaNacimiento << " | "
+                 << rfc << " | "
+                 << centro << " | "
+                 << directivo << " |" << endl;
+        }
+        cout << "+-----------------------------------------------------------------------------------------------+" << endl;
+    } else {
+        cout << "Error al ejecutar la consulta." << endl;
+
+        // Mostrar mensaje de error
+        SQLCHAR       SqlState[6], Msg[SQL_MAX_MESSAGE_LENGTH];
+        SQLINTEGER    NativeError;
+        SQLSMALLINT   MsgLen;
+        if (SQLGetDiagRecA(SQL_HANDLE_STMT, hStmt, 1, SqlState, &NativeError, Msg, sizeof(Msg), &MsgLen) == SQL_SUCCESS) {
+            cout << "SQLSTATE: " << SqlState << endl;
+            cout << "Mensaje: " << Msg << endl;
+            cout << "Código de Error: " << NativeError << endl;
+        }
+    }
+
+    // Liberar recursos
+    SQLFreeHandle(SQL_HANDLE_STMT, hStmt);
+    SQLDisconnect(hDbc);
+    SQLFreeHandle(SQL_HANDLE_DBC, hDbc);
+    SQLFreeHandle(SQL_HANDLE_ENV, hEnv);
+
+    return 0;
+}
