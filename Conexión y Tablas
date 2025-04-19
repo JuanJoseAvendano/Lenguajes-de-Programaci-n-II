@@ -1,0 +1,39 @@
+#include <iostream>
+#include <windows.h>
+#include <sql.h>
+#include <sqlext.h>
+#include <string>
+
+using namespace std;
+
+int main() {
+    system("chcp 1252");
+
+    SQLHENV hEnv;
+    SQLHDBC hDbc;
+    SQLHSTMT hStmt;
+    SQLRETURN ret;
+
+    SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &hEnv);
+    SQLSetEnvAttr(hEnv, SQL_ATTR_ODBC_VERSION, (void*)SQL_OV_ODBC3, 0);
+    SQLAllocHandle(SQL_HANDLE_DBC, hEnv, &hDbc);
+
+    SQLCHAR connStr[] = "DRIVER={SQL Server};SERVER=LAPTOP-8VD1BAB0\\SQLEXPRESS;DATABASE=datos_generales;Trusted_Connection=yes;";
+    SQLDriverConnectA(hDbc, NULL, connStr, SQL_NTS, NULL, 0, NULL, SQL_DRIVER_COMPLETE);
+
+    SQLAllocHandle(SQL_HANDLE_STMT, hDbc, &hStmt);
+
+    // Encabezado de tabla
+    cout << "+-----------------------------------------------------------------------------------------------+" << endl;
+    cout << "| ID | Nombre Completo              | Nacimiento | RFC              | Centro     | Directivo    |" << endl;
+    cout << "+-----------------------------------------------------------------------------------------------+" << endl;
+    cout << "+-----------------------------------------------------------------------------------------------+" << endl;
+
+    // Liberar recursos
+    SQLFreeHandle(SQL_HANDLE_STMT, hStmt);
+    SQLDisconnect(hDbc);
+    SQLFreeHandle(SQL_HANDLE_DBC, hDbc);
+    SQLFreeHandle(SQL_HANDLE_ENV, hEnv);
+
+    return 0;
+}
